@@ -1,0 +1,31 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: analyst-agent-config
+data:
+  LLM_BASE_URL: "REDACTED"
+  LLM_MODEL: "gpt-4o"
+  EMBEDDINGS_BASE_URL: "http://192.168.1.17:8000/v1"
+  EMBEDDINGS_MODEL: "Qwen/Qwen3-Embedding-8B"
+  QDRANT_API: "http://qdrant-svc.qdrant.svc.cluster.local:6333/"
+#  QDRANT_API: "http://qdrant.qdrant.svc.cluster.local:6333/"
+  S3_BUCKET: "amzn-s3-REDACTED"
+  LANGFUSE_BASE_URL: "https://cloud.langfuse.com"
+  PORT: "9000"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: analyst-agent-secret
+type: Opaque
+stringData:
+  # Replace these placeholders with your actual values
+  LLM_API_KEY: "REDACTED"
+  EMBEDDINGS_API_KEY: "EMPTY"
+  QDRANT_API_KEY: "d30472a4-517f-4422-895e-90b21c897708"
+  S3_AKID: "REDACTED"
+  S3_SK: "REDACTED"
+  LANGFUSE_SECRET_KEY: "REDACTED"
+  LANGFUSE_PUBLIC_KEY: "REDACTED"
+---

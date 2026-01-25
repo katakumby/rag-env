@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analyst-agent
+  labels:
+    app: analyst-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analyst-agent
+  template:
+    metadata:
+      labels:
+        app: analyst-agent
+    spec:
+      containers:
+        - name: analyst-agent
+          image: executeit/langgraph-a2a-server:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ATLASSIAN_MCP_URL
+              value: "http://mcp-atlassian-svc:9000/mcp/"
+          ports:
+            - containerPort: 10000
+          envFrom:
+            - configMapRef:
+                name: analyst-agent-config
+            - secretRef:
+                name: analyst-agent-secret
+          resources:
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+            requests:
+              cpu: "100m"
+              memory: "1Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analyst-agent-svc
+spec:
+  selector:
+    app: analyst-agent
+  ports:
+    - protocol: TCP
+      port: 10000
+      targetPort: 10000
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-analyst-to-mcp
+spec:
+  podSelector:
+    matchLabels:
+      app: mcp-atlassian
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: analyst-agent
+      ports:
+        - protocol: TCP
+          port: 9000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-analyst-to-qdrant
+spec:
+  podSelector:
+    matchLabels:
+      app: qdrant
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: analyst-agent
+      ports:
+        - protocol: TCP
+          port: 6334
+        - protocol: TCP
+          port: 6333

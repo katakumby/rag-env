@@ -1,0 +1,16 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: qdrant-http
+  namespace: qdrant
+spec:
+  host: qdrant.apps-crc.testing
+  to:
+    kind: Service
+    name: qdrant-svc                    # change if your Service name is different; check `oc -n qdrant get svc`
+    weight: 100
+  port:
+    targetPort: 6333                 # route will forward to service port 6333
+#  tls:
+#    termination: edge                # optional: edge TLS (router terminates TLS)
+#    insecureEdgeTerminationPolicy: Redirect

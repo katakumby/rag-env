@@ -1,0 +1,155 @@
+### POST embeddings to local vLLM server
+POST http://{{$dotenv EMBEDDINGS_ADDRESS}}/v1/embeddings
+Content-Type: application/json
+
+{
+  "input": "The food was delicious and the waiter...",
+  "model": "{{$dotenv EMBEDDINGS_MODEL}}",
+  "encoding_format": "float"
+}
+
+### Check LLM chat completions
+POST http://{{$dotenv LLM_ADDRESS}}/v1/chat/completions
+Content-Type: application/json
+
+{
+    "model": "{{$dotenv LLM_MODEL}}", "max_tokens": 25, "top_p": 0.8,
+    "messages": [
+        {
+            "role": "user",
+         "content": [{"type": "text", "text": "Hello robot"}]
+        }
+    ]
+}
+### Check LLM chat completions with tools
+POST http://{{$dotenv LLM_ADDRESS}}/v1/chat/completions
+Content-Type: application/json
+
+{
+    "model": "{{$dotenv LLM_MODEL}}", "max_tokens": 25, "top_p": 0.8,
+    "messages": [
+        {
+            "role": "user",
+         "content": [{"type": "text", "text": "What is the weather like in Warsaw?"}]
+        }
+    ],
+    "tools": [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the weather for a location",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {
+                            "type": "string",
+                            "description": "The location to get the weather for"
+                        }
+                    },
+                    "required": [
+                        "location"
+                    ]
+                }
+            }
+        }
+    ]
+}
+
+### Qdrant get collections
+GET {{$dotenv QDRANT_API}}/collections
+api-key: {{$dotenv QDRANT_API_KEY}}
+Content-Type: application/json
+
+POST http://analyst-agent.apps-crc.testing
+Content-Type: application/json
+
+{
+    "id": "12113c25-b752-473f-977e-c9ad33cf4f56",
+    "jsonrpc": "2.0",
+    "method": "message/send",
+    "params": {
+        "message": {
+            "kind": "message",
+            "messageId": "120ec73f93024993becf954d03a672bc",
+            "parts": [
+                {
+                    "kind": "text",
+                    "text": "2+2=?"
+                }
+            ],
+            "role": "user"
+        }
+    }
+}
+### Currency exchange tool
+
+POST http://analyst-agent.apps-crc.testing
+Content-Type: application/json
+
+{
+    "id": "12113c25-b752-473f-977e-c9ad33cf4f56",
+    "jsonrpc": "2.0",
+    "method": "message/send",
+    "params": {
+        "message": {
+            "kind": "message",
+            "messageId": "120ec73f93024993becf954d03a672bc",
+            "parts": [
+                {
+                    "kind": "text",
+                    "text": "how much is 10 USD in INR?"
+                }
+            ],
+            "role": "user"
+        }
+    }
+}
+### Confluence tool
+
+POST http://analyst-agent.apps-crc.testing
+Content-Type: application/json
+
+{
+    "id": "12113c25-b752-473f-977e-c9ad33cf4f56",
+    "jsonrpc": "2.0",
+    "method": "message/send",
+    "params": {
+        "message": {
+            "kind": "message",
+            "messageId": "120ec73f93024993becf954d03a672bc",
+            "parts": [
+                {
+                    "kind": "text",
+                    "text": "Show 10 confluence pages"
+                }
+            ],
+            "role": "user"
+        }
+    }
+}
+### Tools  list
+
+POST http://analyst-agent.apps-crc.testing
+Content-Type: application/json
+
+{
+    "id": "12113c25-b752-473f-977e-c9ad33cf4f56",
+    "jsonrpc": "2.0",
+    "method": "message/send",
+    "params": {
+        "message": {
+            "kind": "message",
+            "messageId": "120ec73f93024993becf954d03a672bc",
+            "parts": [
+                {
+                    "kind": "text",
+                    "text": "What tools can you use? "
+                }
+            ],
+            "role": "user"
+        }
+    }
+}
+
+###

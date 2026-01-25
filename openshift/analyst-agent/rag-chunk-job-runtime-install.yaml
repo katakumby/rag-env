@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rag-chunk-job-runtime-install
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: rag-chunk
+          image: executeit/langgraph-a2a-server:latest
+          imagePullPolicy: IfNotPresent
+          # Use a shell to: run uv sync to install deps into the uv venv, then run the script via uv
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              cd /opt/app-root/
+              echo "Running uv sync to ensure dependencies are installed into the uv venv..."
+              # Use the same flags used in the Dockerfile to avoid installing the project itself
+              uv sync --no-install-project --no-dev
+              echo "Contents of /opt/app-root/.venv (for debug):"
+              ls -la /opt/app-root/.venv || true
+              echo "Running chunk_s3.py via uv (this uses the uv-managed venv)..."
+              uv run /opt/app-root/RAG/chunk_s3.py "iso20022payments" "iso20022payments" "markdownHeaderTextSplitter" "500:30"
+          envFrom:
+            - configMapRef:
+                name: analyst-agent-config
+            - secretRef:
+                name: analyst-agent-secret
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"

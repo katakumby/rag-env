@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ailab-namespace-to-qdrant
+  namespace: qdrant
+spec:
+  podSelector:
+    matchLabels:
+      app: vector-store
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        # Allow any pod from the ailab namespace (namespace labeled netpol-allow=ailab)
+        - namespaceSelector:
+            matchLabels:
+              netpol-allow: "ailab"
+      ports:
+        - protocol: TCP
+          port: 6333
+        - protocol: TCP
+          port: 6334
+
