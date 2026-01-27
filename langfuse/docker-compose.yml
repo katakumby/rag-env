@@ -1,117 +1,9 @@
-version: '3.8'
-
+# Make sure to update the credential placeholders with your own secrets.
+# We mark them with # CHANGEME in the file below.
+# In addition, we recommend to restrict inbound traffic on the host to langfuse-web (port 3000) and minio (port 9090) only.
+# All other components are bound to localhost (127.0.0.1) to only accept connections from the local machine.
+# External connections from other machines will not be able to reach these services directly.
 services:
-  # --- Embeddings Server ---
-  vllm-embed:
-    image: vllm/vllm-openai:latest
-    container_name: vllm-embed
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [ gpu ]
-    volumes:
-      - '${MODELS_PATH}:/root/.cache/huggingface'
-    ports:
-      - "8000:8000"
-    ipc: host
-    command: --model ${EMBEDDINGS_MODEL} --task embed  --gpu-memory-utilization 0.5 --host 0.0.0.0 --port 8000
-    restart: unless-stopped
-  # --- LLM Server ---
-  vllm-llm:
-    image: vllm/vllm-openai:latest
-    container_name: vllm-llm
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [ gpu ]
-    volumes:
-      - '${MODELS_PATH}:/root/.cache/huggingface'
-    ports:
-      - "8001:8000"
-    ipc: host
-    command: --model ${LLM_MODEL} --gpu-memory-utilization 0.5  --max-model-len 16384 --enable-auto-tool-choice  --tool-call-parser hermes --host 0.0.0.0 --port 8000
-    restart: unless-stopped
-
-  # --- Agent Server ---
-  agent:
-    image: executeit/langgraph-a2a-server:latest
-    container_name: agent
-    ports:
-      - "8008:8000"
-    environment:
-      - LLM_BASE_URL=http://${LLM_ADDRESS}/v1/
-      - LLM_MODEL=${LLM_MODEL}
-      - LLM_API_KEY=none
-      - EMBEDDINGS_BASE_URL=http://${EMBEDDINGS_ADDRESS}/v1/
-      - EMBEDDINGS_MODEL=${EMBEDDINGS_MODEL}
-      - EMBEDDINGS_API_KEY=none
-      - QDRANT_API=${QDRANT_API}
-      - QDRANT_API_KEY=${QDRANT_API_KEY}
-      - S3_BUCKET=${S3_BUCKET_AGENT_DOCUMENTS}
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_AKID=${S3_ACCESS_KEY_ID}
-      - S3_SK=${S3_SECRET_ACCESS_KEY}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_INIT_PROJECT_SECRET_KEY}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
-      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL}
-      - ATLASSIAN_MCP_URL=${ATLASSIAN_MCP_URL}
-    restart: unless-stopped
-
-  # --- Local Vector DB (QDRANT) ---
-  qdrant:
-    image: qdrant/qdrant:latest
-    container_name: qdrant
-    ports:
-      - "6333:6333" # Port API HTTP
-      - "6334:6334" # Port gRPC
-    volumes:
-      - qdrant_storage:/qdrant/storage
-    environment:
-      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY}
-    restart: unless-stopped
-
-  # --- Local S3 (MINIO) ---
-  minio:
-    image: minio/minio:latest
-    ports:
-      - "9000:9000" # API S3 (dla Twojego skryptu Python: S3_ENDPOINT)
-      - "9001:9001" # Konsola administratora (przeglądarka)
-    environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID} # Odpowiednik: AWS_ACCESS_KEY_ID / S3_AKID
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY} # Odpowiednik: AWS_SECRET_ACCESS_KEY / S3_SK
-    entrypoint: sh
-    command: -c 'mkdir -p /data/langfuse && mkdir -p /data/agent-documents && minio server --address ":9000" --console-address ":9001" /data'
-    volumes:
-      - minio_data:/data
-    restart: unless-stopped
-    healthcheck:
-      test: [ "CMD", "mc", "ready", "local" ]
-      interval: 1s
-      timeout: 5s
-      retries: 5
-      start_period: 1s
-  # --- Atlassian MCP Server ---
-  atlassian-mcp:
-    image: ghcr.io/sooperset/mcp-atlassian:latest
-    container_name: atlassian-mcp
-    ports:
-      - "9002:9000"
-    environment:
-      # - JIRA_URL=${JIRA_URL}
-      # - JIRA_USERNAME=${JIRA_USERNAME}
-      # - JIRA_API_TOKEN=${JIRA_API_TOKEN}
-      - CONFLUENCE_URL=${CONFLUENCE_URL}
-      - CONFLUENCE_USERNAME=${CONFLUENCE_USERNAME}
-      - CONFLUENCE_API_TOKEN=${CONFLUENCE_API_TOKEN}
-    command: --transport streamable-http --port 9000 -vv
-    restart: unless-stopped
-  # --- Langfuse Worker ---
   langfuse-worker:
     image: docker.io/langfuse/langfuse-worker:3
     restart: always
@@ -173,7 +65,7 @@ services:
       REDIS_TLS_KEY: ${REDIS_TLS_KEY:-/certs/redis.key}
       EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-}
       SMTP_CONNECTION_URL: ${SMTP_CONNECTION_URL:-}
-  # --- Langfuse Web ---
+
   langfuse-web:
     image: docker.io/langfuse/langfuse:3
     restart: always
@@ -192,7 +84,63 @@ services:
       LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_INIT_USER_EMAIL:-}
       LANGFUSE_INIT_USER_NAME: ${LANGFUSE_INIT_USER_NAME:-}
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:-}
-  # --- Local Postgres ---
+
+  clickhouse:
+    image: docker.io/clickhouse/clickhouse-server
+    restart: always
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse} # CHANGEME
+    volumes:
+      - langfuse_clickhouse_data:/var/lib/clickhouse
+      - langfuse_clickhouse_logs:/var/log/clickhouse-server
+    ports:
+      - 127.0.0.1:8123:8123
+      - 127.0.0.1:9000:9000
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 1s
+
+  minio:
+    image: cgr.dev/chainguard/minio
+    restart: always
+    entrypoint: sh
+    # create the 'langfuse' bucket before starting the service
+    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-miniosecret} # CHANGEME
+    ports:
+      - 9090:9000
+      - 127.0.0.1:9091:9001
+    volumes:
+      - langfuse_minio_data:/data
+    healthcheck:
+      test: [ "CMD", "mc", "ready", "local" ]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+      start_period: 1s
+
+  redis:
+    image: docker.io/redis:7
+    restart: always
+    # CHANGEME: row below to secure redis password
+    command: >
+      --requirepass ${REDIS_AUTH:-myredissecret} --maxmemory-policy noeviction
+    ports:
+      - 127.0.0.1:6379:6379
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+
   postgres:
     image: docker.io/postgres:${POSTGRES_VERSION:-17}
     restart: always
@@ -211,50 +159,13 @@ services:
       - 127.0.0.1:5432:5432
     volumes:
       - langfuse_postgres_data:/var/lib/postgresql/data
-  # --- Local Redis --- 
-  redis:
-    image: docker.io/redis:7
-    restart: always
-    # CHANGEME: row below to secure redis password
-    command: >
-      --requirepass ${REDIS_AUTH:-myredissecret} --maxmemory-policy noeviction
-    ports:
-      - 6379:6379
-    healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
-      interval: 3s
-      timeout: 10s
-      retries: 10
-  # --- Local ClickHouse ---
-  clickhouse:
-    image: docker.io/clickhouse/clickhouse-server
-    restart: always
-    user: "101:101"
-    environment:
-      CLICKHOUSE_DB: default
-      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse} # CHANGEME
-    volumes:
-      - langfuse_clickhouse_data:/var/lib/clickhouse
-      - langfuse_clickhouse_logs:/var/log/clickhouse-server
-    ports:
-      - 127.0.0.1:8123:8123
-      - 127.0.0.1:9003:9000
-    healthcheck:
-      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 1s
 
 volumes:
-  qdrant_storage:
-  minio_data:
-  huggingface_cache:
-  agent_storage:
   langfuse_postgres_data:
     driver: local
   langfuse_clickhouse_data:
     driver: local
   langfuse_clickhouse_logs:
+    driver: local
+  langfuse_minio_data:
     driver: local
