@@ -37,7 +37,13 @@ services:
     ipc: host
     command: --model ${LLM_MODEL} --gpu-memory-utilization 0.5  --max-model-len 16384 --enable-auto-tool-choice  --tool-call-parser hermes --host 0.0.0.0 --port 8000
     restart: unless-stopped
-
+  # --- A2A Inspector ---
+  a2a-inspector:
+    image: executeit/a2a-inspector:latest
+    container_name: a2a-inspector
+    ports:
+      - "8002:8080"
+    restart: unless-stopped
   # --- Agent Server ---
   agent:
     image: executeit/langgraph-a2a-server:latest
@@ -63,6 +69,40 @@ services:
       - ATLASSIAN_MCP_URL=${ATLASSIAN_MCP_URL}
     restart: unless-stopped
 
+  # --- Python Workspace ---
+  python-workspace:
+    container_name: python-workspace
+    image: ghcr.io/astral-sh/uv:0.9.28-python3.10-alpine
+    # user: "${UID}:${GID}"
+    # https://github.com/astral-sh/uv/pkgs/container/uv/versions
+    volumes:
+      - ./agent:/app
+      - uv-cache:/root/.cache/uv # Persistence for cache
+    working_dir: /app
+    expose:
+      - 10000:10000
+    environment:
+      # Redirect cache to a writable location if the default is root-owned
+      - UV_CACHE_DIR=/tmp/uv-cache
+      - UV_LINK_MODE=copy
+      - LLM_BASE_URL=http://${LLM_ADDRESS}/v1/
+      - LLM_MODEL=${LLM_MODEL}
+      - LLM_API_KEY=none
+      - EMBEDDINGS_BASE_URL=http://${EMBEDDINGS_ADDRESS}/v1/
+      - EMBEDDINGS_MODEL=${EMBEDDINGS_MODEL}
+      - EMBEDDINGS_API_KEY=none
+      - QDRANT_API=${QDRANT_API}
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - S3_BUCKET=${S3_BUCKET_AGENT_DOCUMENTS}
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_AKID=${S3_ACCESS_KEY_ID}
+      - S3_SK=${S3_SECRET_ACCESS_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_INIT_PROJECT_SECRET_KEY}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
+      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL}
+      - ATLASSIAN_MCP_URL=${ATLASSIAN_MCP_URL}
+    command: tail -f /dev/null # Keep container alive for exec
+
   # --- Local Vector DB (QDRANT) ---
   qdrant:
     image: qdrant/qdrant:latest
@@ -78,6 +118,7 @@ services:
 
   # --- Local S3 (MINIO) ---
   minio:
+    container_name: minio
     image: minio/minio:latest
     ports:
       - "9000:9000" # API S3 (dla Twojego skryptu Python: S3_ENDPOINT)
@@ -258,3 +299,4 @@ volumes:
     driver: local
   langfuse_clickhouse_logs:
     driver: local
+  uv-cache:
