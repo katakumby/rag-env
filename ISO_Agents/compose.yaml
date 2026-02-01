@@ -79,16 +79,16 @@ services:
       - ./agent:/app
       - uv-cache:/root/.cache/uv # Persistence for cache
     working_dir: /app
-    expose:
+    ports:
       - 10000:10000
     environment:
       # Redirect cache to a writable location if the default is root-owned
       - UV_CACHE_DIR=/tmp/uv-cache
       - UV_LINK_MODE=copy
-      - LLM_BASE_URL=http://${LLM_ADDRESS}/v1/
+      - LLM_BASE_URL=http://vllm-llm:8000/v1/
       - LLM_MODEL=${LLM_MODEL}
       - LLM_API_KEY=none
-      - EMBEDDINGS_BASE_URL=http://${EMBEDDINGS_ADDRESS}/v1/
+      - EMBEDDINGS_BASE_URL=http://vllm-embed:8000/v1/
       - EMBEDDINGS_MODEL=${EMBEDDINGS_MODEL}
       - EMBEDDINGS_API_KEY=none
       - QDRANT_API=${QDRANT_API}
