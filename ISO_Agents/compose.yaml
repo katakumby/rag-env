@@ -70,8 +70,8 @@ services:
     restart: unless-stopped
 
   # --- Python Workspace ---
-  python-workspace:
-    container_name: python-workspace
+  python-workspace-1:
+    container_name: python-workspace-1
     image: ghcr.io/astral-sh/uv:0.9.28-python3.10-alpine
     # user: "${UID}:${GID}"
     # https://github.com/astral-sh/uv/pkgs/container/uv/versions
@@ -101,6 +101,49 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
       - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL}
       - ATLASSIAN_MCP_URL=${ATLASSIAN_MCP_URL}
+    command: tail -f /dev/null # Keep container alive for exec
+  # --- Python Workspace 1 ---
+  python-workspace-2:
+    container_name: python-workspace-2
+    image: ghcr.io/astral-sh/uv:0.9.28-python3.10-alpine
+    # user: "${UID}:${GID}"
+    # https://github.com/astral-sh/uv/pkgs/container/uv/versions
+    volumes:
+      - ./agent:/app
+      - uv-cache:/root/.cache/uv # Persistence for cache
+    working_dir: /app
+    ports:
+      - 10000:10000
+    environment:
+      # Redirect cache to a writable location if the default is root-owned
+      - UV_CACHE_DIR=/tmp/uv-cache
+      - UV_LINK_MODE=copy
+      - CHUNKING_MODULE=legacy
+      - CHUNKING_STRATEGY=auto
+      - INPUT_DIRECTORY=/app/inputs
+      - CHUNK_SIZE=600
+      - CHUNK_OVERLAP=100
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_AKID=${S3_ACCESS_KEY_ID}
+      - S3_SK=${S3_SECRET_ACCESS_KEY}
+      - S3_REGION=${S3_REGION}
+      - S3_BUCKET=${S3_BUCKET_AGENT_DOCUMENTS}
+      - QDRANT_API=${QDRANT_API}
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - COLLECTION_NAME=iso20022_remote_70b
+      - EMBEDDING_PROVIDER=local
+      - EMBEDDING_API_KEY=lm-studio
+      - EMBEDDING_BASE_URL=http://${EMBEDDINGS_ADDRESS:-vllm-embed:8000}/v1/
+      - EMBEDDING_MODEL=${EMBEDDINGS_MODEL}
+      - EMBEDDING_DIM=768
+      - CHAT_PROVIDER=local
+      - CHAT_API_KEY=lm-studio
+      - CHAT_BASE_URL=http://${LLM_ADDRESS:-vllm-llm:8000}/v1/
+      - CHAT_MODEL=${LLM_MODEL}
+      - CONFLUENCE_URL=${CONFLUENCE_URL}
+      - CONFLUENCE_USERNAME=${CONFLUENCE_USERNAME}
+      - CONFLUENCE_API_TOKEN=${CONFLUENCE_API_TOKEN}
+      - CONFLUENCE_MAX_CHARS=2000
     command: tail -f /dev/null # Keep container alive for exec
 
   # --- Local Vector DB (QDRANT) ---
