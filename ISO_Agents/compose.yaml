@@ -104,6 +104,8 @@ services:
       A2A_AGENT_HOST: ${A2A_AGENT_HOST}
       # --- Custom Overrides
       DEFAULT_HEADERS: ${DEFAULT_HEADERS}
+      AGENT_SETTINGS: "Analyst agent"
+      TIKTOKEN_CACHE_DIR: /app/buissnes_agent
     command: [ "uv", "run", "/app/buissnes_agent/a2a_agent/", "--host", "agent" ]
     # command: tail -f /dev/null
   agent-mcp:
@@ -155,8 +157,8 @@ services:
       ISO20022_BUSINESS_COLLECTION_NAME: ${ISO20022_BUSINESS_COLLECTION_NAME}
       ISO20022_TECHNICAL_COLLECTION_NAME: ${ISO20022_TECHNICAL_COLLECTION_NAME}
       ISO20022_MESSAGE_SCHEMAS_COLLECTION_NAME: ${ISO20022_MESSAGE_SCHEMAS_COLLECTION_NAME}
-    # uv run sync && uv run buissnes_agent/MCPServer.py --transport http --port 9000 --host 0.0.0.0
-    # command: tail -f /dev/null
+      DEFAULT_HEADERS: ${DEFAULT_HEADERS}
+      TIKTOKEN_CACHE_DIR: /app/buissnes_agent
     command: [ "uv", "run", "/app/buissnes_agent/MCPServer.py", "--transport", "http", "--port", "9000", "--host", "0.0.0.0", "-vv" ]
     # --- Python Workspace ---
   agent-mcp-knowledge-ingest:
@@ -194,6 +196,8 @@ services:
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
       LANGFUSE_SECRET_KEY: ${LANGFUSE_INIT_PROJECT_SECRET_KEY}
       LANGFUSE_BASE_URL: ${LANGFUSE_BASE_URL}
+      DEFAULT_HEADERS: ${DEFAULT_HEADERS}
+      TIKTOKEN_CACHE_DIR: /app/buissnes_agent
     command: [ "uv", "run", "/app/buissnes_agent/KnowledgeBaseIngestion.py", "--profile", "business_knowledge_base" ]
     # command: [ "uv", "run", "/app/buissnes_agent/KnowledgeBaseIngestion.py", "--profile", "technical_knowledge_base" ]
     # command: [ "uv", "run", "/app/buissnes_agent/KnowledgeBaseIngestion.py", "--profile", "message_schemas_knowledge_base" ]
@@ -213,7 +217,7 @@ services:
       UV_CACHE_DIR: /root/.cache/uv
       UV_LINK_MODE: copy
       A2A_AGENT_HOST: python-workspace-agent
-    # uv run sync && uv run buissnes_agent/a2a_agent/ --host python-workspace-agent
+    # uv sync && uv run buissnes_agent/a2a_agent/ --host python-workspace-agent
     command: tail -f /dev/null # Keep container alive for exec
   # --- Python Workspace 1 ---
   python-workspace-mcp:
@@ -230,7 +234,7 @@ services:
       # Redirect cache to a writable location if the default is root-owned
       UV_CACHE_DIR: /root/.cache/uv
       UV_LINK_MODE: copy
-    # uv run sync && uv run buissnes_agent/MCPServer.py --transport http --port 9000 --host 0.0.0.0
+    # uv sync && uv run buissnes_agent/MCPServer.py --transport http --port 9000 --host 0.0.0.0
     command: tail -f /dev/null # Keep container alive for exec
   python-workspace-knowledge-ingest:
     container_name: python-workspace-knowledge-ingest
@@ -244,7 +248,7 @@ services:
       # Redirect cache to a writable location if the default is root-owned
       UV_CACHE_DIR: /root/.cache/uv
       UV_LINK_MODE: copy
-    # uv run sync
+    # uv sync
     # uv run buissnes_agent/KnowledgeBaseIngestion.py --profile business_knowledge_base
     # uv run buissnes_agent/KnowledgeBaseIngestion.py --profile technical_knowledge_base
     # uv run buissnes_agent/KnowledgeBaseIngestion.py --profile message_schemas_knowledge_base
