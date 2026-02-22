@@ -57,220 +57,198 @@ services:
     restart: unless-stopped
   # --- Agent Server ---
   agent:
-    image: ghcr.io/astral-sh/uv:0.9.28-python3.10-alpine
+    image: executeit/python-agent-mcp
     container_name: agent
-    working_dir: /app
+    # working_dir: /app
+    # volumes:
+    #   - ./agent:/app
+    #   - uv-cache:/root/.cache/uv # Persistence for cache
+    ports:
+      - "10000:10000"
+    environment: &agent-env
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_AKID: ${S3_ACCESS_KEY_ID}
+      S3_SK: ${S3_SECRET_ACCESS_KEY}
+      S3_REGION: ${S3_REGION}
+      S3_BUCKET: ${S3_BUCKET_AGENT_DOCUMENTS}
+      # --- QDRANT ---
+      QDRANT_API: ${QDRANT_API}
+      QDRANT_API_KEY: ${QDRANT_API_KEY}
+      COLLECTION_NAME: iso20022_remote_70b
+      # --- EMBEDDING ---
+      EMBEDDING_PROVIDER: local
+      EMBEDDING_API_KEY: vllm
+      EMBEDDING_BASE_URL: http://${EMBEDDINGS_ADDRESS}/v1
+      EMBEDDING_MODEL: ${EMBEDDINGS_MODEL}
+      EMBEDDING_DIM: 1024 # REMEMBER TO CHANGE THIS IF YOU CHANGE EMBEDDINGS_MODEL
+      # --- CHAT ---
+      CHAT_PROVIDER: local
+      CHAT_API_KEY: vllm
+      CHAT_BASE_URL: http://${LLM_ADDRESS}/v1
+      CHAT_MODEL: ${LLM_MODEL}
+      CHAT_TEMPERATURE: ${LLM_TEMPERATURE}
+      # --- CONFLUENCE ---
+      CONFLUENCE_URL: ${CONFLUENCE_URL}
+      CONFLUENCE_USERNAME: ${CONFLUENCE_USERNAME}
+      CONFLUENCE_API_TOKEN: ${CONFLUENCE_API_TOKEN}
+      CONFLUENCE_MAX_CHARS: 2000
+      # --- ATLASSIAN MCP ---
+      ATLASSIAN_MCP_URL: ${ATLASSIAN_MCP_URL}
+      # --- INTERNAL MCP ---
+      INTERNAL_MCP_URL: ${INTERNAL_MCP_URL}
+      # --- LANGFUSE ---
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_INIT_PROJECT_SECRET_KEY}
+      LANGFUSE_BASE_URL: ${LANGFUSE_BASE_URL}
+      # --- A2A ---
+      A2A_AGENT_HOST: ${A2A_AGENT_HOST}
+      # --- Custom Overrides
+      DEFAULT_HEADERS: ${DEFAULT_HEADERS}
+    command: [ "uv", "run", "/app/buissnes_agent/a2a_agent/", "--host", "agent" ]
+    # command: tail -f /dev/null
+  agent-mcp:
+    image: executeit/python-agent-mcp
+    container_name: agent-mcp
+    ports:
+      - "8011:9000"
+    # working_dir: /app
+    environment: &agent-mcp-env
+      DATA_SOURCE: s3
+      # - INPUT_S3_DIRECTORY=iso20022payments
+      # - CHUNKING_MODULE=langchain
+      # - CHUNK_SIZE=600
+      # - CHUNK_OVERLAP=100
+      # - ALLOWED_EXTENSIONS=.md,.txt,.xml,.xsd,.pdf,.docx,.xlsx,.json
+      # --- S3 ---
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_AKID: ${S3_ACCESS_KEY_ID}
+      S3_SK: ${S3_SECRET_ACCESS_KEY}
+      S3_REGION: ${S3_REGION}
+      S3_BUCKET: ${S3_BUCKET_AGENT_DOCUMENTS}
+      # --- QDRANT ---
+      QDRANT_API: ${QDRANT_API}
+      QDRANT_API_KEY: ${QDRANT_API_KEY}
+      # - COLLECTION_NAME=iso20022_remote_70b
+      # --- EMBEDDING ---
+      EMBEDDING_PROVIDER: local
+      EMBEDDING_API_KEY: vllm
+      EMBEDDING_BASE_URL: http://${EMBEDDINGS_ADDRESS}/v1
+      EMBEDDING_MODEL: ${EMBEDDINGS_MODEL}
+      EMBEDDING_DIM: 1024 # REMEMBER TO CHANGE THIS IF YOU CHANGE EMBEDDINGS_MODEL
+      # --- CHAT ---
+      CHAT_PROVIDER: local
+      CHAT_API_KEY: vllm
+      CHAT_BASE_URL: http://${LLM_ADDRESS}/v1
+      CHAT_MODEL: ${LLM_MODEL}
+      # --- CONFLUENCE ---
+      CONFLUENCE_URL: ${CONFLUENCE_URL}
+      CONFLUENCE_USERNAME: ${CONFLUENCE_USERNAME}
+      CONFLUENCE_API_TOKEN: ${CONFLUENCE_API_TOKEN}
+      CONFLUENCE_MAX_CHARS: 2000
+      # --- ATLASSIAN MCP ---
+      ATLASSIAN_MCP_URL: ${ATLASSIAN_MCP_URL}
+      # --- LANGFUSE ---
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_INIT_PROJECT_SECRET_KEY}
+      LANGFUSE_BASE_URL: ${LANGFUSE_BASE_URL}
+      # Tool Collections
+      ISO20022_BUSINESS_COLLECTION_NAME: ${ISO20022_BUSINESS_COLLECTION_NAME}
+      ISO20022_TECHNICAL_COLLECTION_NAME: ${ISO20022_TECHNICAL_COLLECTION_NAME}
+      ISO20022_MESSAGE_SCHEMAS_COLLECTION_NAME: ${ISO20022_MESSAGE_SCHEMAS_COLLECTION_NAME}
+    # uv run sync && uv run buissnes_agent/MCPServer.py --transport http --port 9000 --host 0.0.0.0
+    # command: tail -f /dev/null
+    command: [ "uv", "run", "/app/buissnes_agent/MCPServer.py", "--transport", "http", "--port", "9000", "--host", "0.0.0.0", "-vv" ]
+    # --- Python Workspace ---
+  agent-mcp-knowledge-ingest:
+    image: executeit/python-agent-mcp
+    container_name: agent-mcp-knowledge-ingest
+    environment: &agent-mcp-knowledge-ingest-env
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      # --- S3 ---
+      S3_AKID: ${S3_ACCESS_KEY_ID}
+      S3_SK: ${S3_SECRET_ACCESS_KEY}
+      S3_REGION: ${S3_REGION}
+      S3_BUCKET: ${S3_BUCKET_AGENT_DOCUMENTS}
+      # --- QDRANT ---
+      QDRANT_API: ${QDRANT_API}
+      QDRANT_API_KEY: ${QDRANT_API_KEY}
+      # --- EMBEDDING ---
+      EMBEDDING_PROVIDER: local
+      EMBEDDING_API_KEY: vllm
+      EMBEDDING_BASE_URL: http://${EMBEDDINGS_ADDRESS}/v1
+      EMBEDDING_MODEL: ${EMBEDDINGS_MODEL}
+      EMBEDDING_DIM: 1024 # REMEMBER TO CHANGE THIS IF YOU CHANGE EMBEDDINGS_MODEL
+      # --- CHAT ---
+      CHAT_PROVIDER: local
+      CHAT_API_KEY: vllm
+      CHAT_BASE_URL: http://${LLM_ADDRESS}/v1
+      CHAT_MODEL: ${LLM_MODEL}
+      # --- CONFLUENCE ---
+      CONFLUENCE_URL: ${CONFLUENCE_URL}
+      CONFLUENCE_USERNAME: ${CONFLUENCE_USERNAME}
+      CONFLUENCE_API_TOKEN: ${CONFLUENCE_API_TOKEN}
+      CONFLUENCE_MAX_CHARS: 2000
+      # --- ATLASSIAN MCP ---
+      ATLASSIAN_MCP_URL: ${ATLASSIAN_MCP_URL}
+      # --- LANGFUSE ---
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_INIT_PROJECT_SECRET_KEY}
+      LANGFUSE_BASE_URL: ${LANGFUSE_BASE_URL}
+    command: [ "uv", "run", "/app/buissnes_agent/KnowledgeBaseIngestion.py", "--profile", "business_knowledge_base" ]
+    # command: [ "uv", "run", "/app/buissnes_agent/KnowledgeBaseIngestion.py", "--profile", "technical_knowledge_base" ]
+    # command: [ "uv", "run", "/app/buissnes_agent/KnowledgeBaseIngestion.py", "--profile", "message_schemas_knowledge_base" ]
+
+    # --- Python Workspace ---
+  python-workspace-agent:
+    container_name: python-workspace-agent
+    image: ghcr.io/astral-sh/uv:0.9.28-python3.10-alpine
     volumes:
       - ./agent:/app
       - uv-cache:/root/.cache/uv # Persistence for cache
+    working_dir: /app
     ports:
-      - "10000:10000"
+      - 10000:10000
     environment:
-      - UV_LINK_MODE=copy
-      # --- S3 ---
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_AKID=${S3_ACCESS_KEY_ID}
-      - S3_SK=${S3_SECRET_ACCESS_KEY}
-      - S3_REGION=${S3_REGION}
-      - S3_BUCKET=${S3_BUCKET_AGENT_DOCUMENTS}
-      # --- QDRANT ---
-      - QDRANT_API=${QDRANT_API}
-      - QDRANT_API_KEY=${QDRANT_API_KEY}
-      - COLLECTION_NAME=iso20022_remote_70b
-      # --- EMBEDDING ---
-      - EMBEDDING_PROVIDER=local
-      - EMBEDDING_API_KEY=vllm
-      - EMBEDDING_BASE_URL=http://${EMBEDDINGS_ADDRESS}/v1
-      - EMBEDDING_MODEL=${EMBEDDINGS_MODEL}
-      - EMBEDDING_DIM=1024 # REMEMBER TO CHANGE THIS IF YOU CHANGE EMBEDDINGS_MODEL
-      # --- CHAT ---
-      - CHAT_PROVIDER=local
-      - CHAT_API_KEY=vllm
-      - CHAT_BASE_URL=http://${LLM_ADDRESS}/v1
-      - CHAT_MODEL=${LLM_MODEL}
-      - CHAT_TEMPERATURE=${LLM_TEMPERATURE}
-      # --- CONFLUENCE ---
-      - CONFLUENCE_URL=${CONFLUENCE_URL}
-      - CONFLUENCE_USERNAME=${CONFLUENCE_USERNAME}
-      - CONFLUENCE_API_TOKEN=${CONFLUENCE_API_TOKEN}
-      - CONFLUENCE_MAX_CHARS=2000
-      # --- ATLASSIAN MCP ---
-      - ATLASSIAN_MCP_URL=${ATLASSIAN_MCP_URL}
-      # --- INTERNAL MCP ---
-      - INTERNAL_MCP_URL=${INTERNAL_MCP_URL}
-      # --- LANGFUSE ---
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_INIT_PROJECT_SECRET_KEY}
-      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL}
-      # --- A2A ---
-      - A2A_AGENT_HOST=${A2A_AGENT_HOST}
-      # --- Custom Overrides
-      - DEFAULT_HEADERS=${DEFAULT_HEADERS}
-    # uv run sync && uv run buissnes_agent/a2a_agent/ --host agent
-    command: tail -f /dev/null
-  agent-mcp:
+      <<: *agent-env
+      UV_CACHE_DIR: /root/.cache/uv
+      UV_LINK_MODE: copy
+      A2A_AGENT_HOST: python-workspace-agent
+    # uv run sync && uv run buissnes_agent/a2a_agent/ --host python-workspace-agent
+    command: tail -f /dev/null # Keep container alive for exec
+  # --- Python Workspace 1 ---
+  python-workspace-mcp:
+    container_name: python-workspace-mcp
     image: ghcr.io/astral-sh/uv:0.9.28-python3.10-alpine
-    container_name: agent-mcp
     volumes:
       - ./mcp:/app
       - uv-cache:/root/.cache/uv # Persistence for cache
-    ports:
-      - "8011:8011"
     working_dir: /app
+    ports:
+      - 8011:9000
     environment:
-      - UV_LINK_MODE=copy
-      - DATA_SOURCE=s3
-      - INPUT_S3_DIRECTORY=iso20022payments
-      - CHUNKING_MODULE=langchain
-      - CHUNK_SIZE=600
-      - CHUNK_OVERLAP=100
-      - ALLOWED_EXTENSIONS=.md,.txt,.xml,.xsd,.pdf,.docx,.xlsx,.json
-      # MARKDOWN (.md)
-      - LANGCHAIN_STRATEGY_MD=markdownHeaderTextSplitter
-      - LANGCHAIN_CHUNK_SIZE_MD=1000
-      - LANGCHAIN_CHUNK_OVERLAP_MD=100
-      # TEXT (.txt)
-      - LANGCHAIN_STRATEGY_TXT=markdownHeaderTextSplitter
-      - LANGCHAIN_CHUNK_SIZE_TXT=1000
-      - LANGCHAIN_CHUNK_OVERLAP_TXT=200
-      # XML / XSD
-      - LANGCHAIN_STRATEGY_XML=markdownHeaderTextSplitter
-      - LANGCHAIN_CHUNK_SIZE_XML=600
-      - LANGCHAIN_CHUNK_OVERLAP_XML=50
-      - LANGCHAIN_STRATEGY_XSD=markdownHeaderTextSplitter
-      - LANGCHAIN_CHUNK_SIZE_XSD=600
-      - LANGCHAIN_CHUNK_OVERLAP_XSD=50
-      # JSON
-      - LANGCHAIN_STRATEGY_JSON=markdownHeaderTextSplitter
-      - LANGCHAIN_CHUNK_SIZE_JSON=500
-      - LANGCHAIN_CHUNK_OVERLAP_JSON=0
-      # PDF
-      - LANGCHAIN_STRATEGY_PDF=markdownHeaderTextSplitter
-      - LANGCHAIN_CHUNK_SIZE_PDF=1500
-      - LANGCHAIN_CHUNK_OVERLAP_PDF=200
-      # DOCX
-      - LANGCHAIN_STRATEGY_DOCX=markdownHeaderTextSplitter
-      - LANGCHAIN_CHUNK_SIZE_DOCX=1500
-      - LANGCHAIN_CHUNK_OVERLAP_DOCX=200
-      # XLSX
-      - LANGCHAIN_STRATEGY_XLSX=recursive
-      - LANGCHAIN_CHUNK_SIZE_XLSX=2000
-      - LANGCHAIN_CHUNK_OVERLAP_XLSX=0
-      # --- DEFAULT ---
-      - LANGCHAIN_STRATEGY_DEF=markdownHeaderTextSplitter
-      - LANGCHAIN_CHUNK_SIZE_DEF=2000
-      - LANGCHAIN_CHUNK_OVERLAP_DEF=0
-      # --- S3 ---
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_AKID=${S3_ACCESS_KEY_ID}
-      - S3_SK=${S3_SECRET_ACCESS_KEY}
-      - S3_REGION=${S3_REGION}
-      - S3_BUCKET=${S3_BUCKET_AGENT_DOCUMENTS}
-      # --- QDRANT ---
-      - QDRANT_API=${QDRANT_API}
-      - QDRANT_API_KEY=${QDRANT_API_KEY}
-      - COLLECTION_NAME=iso20022_remote_70b
-      # --- EMBEDDING ---
-      - EMBEDDING_PROVIDER=local
-      - EMBEDDING_API_KEY=vllm
-      - EMBEDDING_BASE_URL=http://${EMBEDDINGS_ADDRESS}/v1
-      - EMBEDDING_MODEL=${EMBEDDINGS_MODEL}
-      - EMBEDDING_DIM=1024 # REMEMBER TO CHANGE THIS IF YOU CHANGE EMBEDDINGS_MODEL
-      # --- CHAT ---
-      - CHAT_PROVIDER=local
-      - CHAT_API_KEY=vllm
-      - CHAT_BASE_URL=http://${LLM_ADDRESS}/v1
-      - CHAT_MODEL=${LLM_MODEL}
-      # --- CONFLUENCE ---
-      - CONFLUENCE_URL=${CONFLUENCE_URL}
-      - CONFLUENCE_USERNAME=${CONFLUENCE_USERNAME}
-      - CONFLUENCE_API_TOKEN=${CONFLUENCE_API_TOKEN}
-      - CONFLUENCE_MAX_CHARS=2000
-      # --- ATLASSIAN MCP ---
-      - ATLASSIAN_MCP_URL=${ATLASSIAN_MCP_URL}
-      # --- LANGFUSE ---
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_INIT_PROJECT_SECRET_KEY}
-      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL}
-    # uv run sync && uv run buissnes_agent/MCPServer.py --transport http --port 8011 --host 0.0.0.0
-    command: tail -f /dev/null
-    # --- Python Workspace ---
-  python-workspace-1:
-    container_name: python-workspace-1
+      <<: *agent-mcp-env
+      # Redirect cache to a writable location if the default is root-owned
+      UV_CACHE_DIR: /root/.cache/uv
+      UV_LINK_MODE: copy
+    # uv run sync && uv run buissnes_agent/MCPServer.py --transport http --port 9000 --host 0.0.0.0
+    command: tail -f /dev/null # Keep container alive for exec
+  python-workspace-knowledge-ingest:
+    container_name: python-workspace-knowledge-ingest
     image: ghcr.io/astral-sh/uv:0.9.28-python3.10-alpine
-    # user: "${UID}:${GID}"
-    # https://github.com/astral-sh/uv/pkgs/container/uv/versions
     volumes:
-      - ./agent:/app
+      - ./knowledge-ingest:/app
       - uv-cache:/root/.cache/uv # Persistence for cache
     working_dir: /app
-    ports:
-      - 10000:10000
     environment:
+      <<: *agent-mcp-knowledge-ingest-env
       # Redirect cache to a writable location if the default is root-owned
-      - UV_CACHE_DIR=/tmp/uv-cache
-      - UV_LINK_MODE=copy
-      - LLM_BASE_URL=http://vllm-llm:8000/v1/
-      - LLM_MODEL=${LLM_MODEL}
-      - LLM_API_KEY=none
-      - EMBEDDINGS_BASE_URL=http://vllm-embed:8000/v1/
-      - EMBEDDINGS_MODEL=${EMBEDDINGS_MODEL}
-      - EMBEDDINGS_API_KEY=none
-      - QDRANT_API=${QDRANT_API}
-      - QDRANT_API_KEY=${QDRANT_API_KEY}
-      - S3_BUCKET=${S3_BUCKET_AGENT_DOCUMENTS}
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_AKID=${S3_ACCESS_KEY_ID}
-      - S3_SK=${S3_SECRET_ACCESS_KEY}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_INIT_PROJECT_SECRET_KEY}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
-      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL}
-      - ATLASSIAN_MCP_URL=${ATLASSIAN_MCP_URL}
-    command: tail -f /dev/null # Keep container alive for exec
-  # --- Python Workspace 1 ---
-  python-workspace-2:
-    container_name: python-workspace-2
-    image: ghcr.io/astral-sh/uv:0.9.28-python3.10-alpine
-    # user: "${UID}:${GID}"
-    # https://github.com/astral-sh/uv/pkgs/container/uv/versions
-    volumes:
-      - ./agent:/app
-      - uv-cache:/root/.cache/uv # Persistence for cache
-    working_dir: /app
-    ports:
-      - 10000:10000
-    environment:
-      # Redirect cache to a writable location if the default is root-owned
-      - UV_CACHE_DIR=/tmp/uv-cache
-      - UV_LINK_MODE=copy
-      - CHUNKING_MODULE=legacy
-      - CHUNKING_STRATEGY=auto
-      - INPUT_DIRECTORY=/app/inputs
-      - CHUNK_SIZE=600
-      - CHUNK_OVERLAP=100
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_AKID=${S3_ACCESS_KEY_ID}
-      - S3_SK=${S3_SECRET_ACCESS_KEY}
-      - S3_REGION=${S3_REGION}
-      - S3_BUCKET=${S3_BUCKET_AGENT_DOCUMENTS}
-      - QDRANT_API=${QDRANT_API}
-      - QDRANT_API_KEY=${QDRANT_API_KEY}
-      - COLLECTION_NAME=iso20022_remote_70b
-      - EMBEDDING_PROVIDER=local
-      - EMBEDDING_API_KEY=lm-studio
-      - EMBEDDING_BASE_URL=http://${EMBEDDINGS_ADDRESS:-vllm-embed:8000}/v1/
-      - EMBEDDING_MODEL=${EMBEDDINGS_MODEL}
-      - EMBEDDING_DIM=768
-      - CHAT_PROVIDER=local
-      - CHAT_API_KEY=lm-studio
-      - CHAT_BASE_URL=http://${LLM_ADDRESS:-vllm-llm:8000}/v1/
-      - CHAT_MODEL=${LLM_MODEL}
-      - CONFLUENCE_URL=${CONFLUENCE_URL}
-      - CONFLUENCE_USERNAME=${CONFLUENCE_USERNAME}
-      - CONFLUENCE_API_TOKEN=${CONFLUENCE_API_TOKEN}
-      - CONFLUENCE_MAX_CHARS=2000
-    command: tail -f /dev/null # Keep container alive for exec
-
+      UV_CACHE_DIR: /root/.cache/uv
+      UV_LINK_MODE: copy
+    # uv run sync
+    # uv run buissnes_agent/KnowledgeBaseIngestion.py --profile business_knowledge_base
+    # uv run buissnes_agent/KnowledgeBaseIngestion.py --profile technical_knowledge_base
+    # uv run buissnes_agent/KnowledgeBaseIngestion.py --profile message_schemas_knowledge_base
+    command: tail -f /dev/null # Keep container alive for exe
   # --- Local Vector DB (QDRANT) ---
   qdrant:
     image: qdrant/qdrant:latest
@@ -307,6 +285,7 @@ services:
       start_period: 1s
   # --- Atlassian MCP Server ---
   atlassian-mcp:
+    #image: local_cmcp:latest
     image: ghcr.io/sooperset/mcp-atlassian:latest
     container_name: atlassian-mcp
     ports:
@@ -318,7 +297,7 @@ services:
       - CONFLUENCE_URL=${CONFLUENCE_URL}
       - CONFLUENCE_USERNAME=${CONFLUENCE_USERNAME}
       - CONFLUENCE_API_TOKEN=${CONFLUENCE_API_TOKEN}
-    command: --transport streamable-http --port 9000 -vv
+    command: --transport streamable-http --port 9000 -v
     restart: unless-stopped
   # --- Langfuse Worker ---
   langfuse-worker:
